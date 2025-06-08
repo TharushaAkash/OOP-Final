@@ -1,0 +1,25 @@
+Student Name: <Name>
+Paper Name: Paper 4
+Total Marks: (sum of all question marks)
+Marks Breakdown:
+Q1: /20
+Q2: /15
+Q3: /15
+Q4: /25
+Q5A: /10
+Q5B: /15
+Total: /100
+
+Summary of Mistakes / Areas for Improvement:
+- Use bullet points to provide concise feedback per question or overall.
+
+Encouraging Closing Message:
+- Conclude with a positive note motivating the student.
+
+Additional Guidelines:
+For coding-based questions (Q1, Q3, Q4, Q5B):
+- Allocate 2 marks for matching the expected output.
+- Assess based on Requirement Coverage, Logic & Correctness, and Use of Relevant OOP Concepts.
+
+For theory-based questions (Q2, Q5A):
+- No single "correct" answer; evaluate based on Accurate Use and Explanation of OOP Concepts, Logical Clarity, and Response Completeness.

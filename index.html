@@ -209,24 +209,72 @@ Strictly follow the above marking scheme and the marking guide for each question
     // - Consider moving API calls to a backend if you want to keep your keys secure.
 
     async function checkAnswerWithAI(question, answer, markingGuide, maxMarks) {
-      // Use a public/external backend endpoint, NOT localhost
+      if (!answer || !answer.trim()) return { score: 0, feedback: "No answer provided." };
       try {
-        const resp = await fetch("https://tr-test-backend.onrender.com/api/grade", {
+        const token = "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";
+        const endpoint = "https://models.github.ai/inference";
+        const model = "openai/gpt-4.1";
+        const prompt = `
+You are an exam grader. Grade the following answer strictly according to the marking guide and allocate marks out of ${maxMarks}.
+
+Question: ${question}
+Marking Guide: ${markingGuide || "N/A"}
+Student Answer: ${answer}
+
+Respond in the following JSON format:
+{
+  "score": <integer from 0 to ${maxMarks}>,
+  "errors": [ "list of mistakes or missing points" ],
+  "correct": [ "list of correct points" ],
+  "improvements": [ "list of areas to improve" ],
+  "conclusion": "short summary of the answer quality"
+}
+
+If the answer is blank, empty, or only whitespace, respond with {"score":0,"errors":["No answer provided."],"correct":[],"improvements":[],"conclusion":"No answer submitted."}
+`;
+
+        const response = await fetch(endpoint + "/chat/completions", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question, answer, markingGuide, maxMarks })
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify({
+            messages: [
+              { role: "system", content: "You are an exam grading assistant." },
+              { role: "user", content: prompt }
+            ],
+            temperature: 0,
+            top_p: 1,
+            model: model
+          })
         });
-        if (!resp.ok) throw new Error("Backend error: " + resp.status);
-        const data = await resp.json();
-        return typeof data.score === "number" ? data.score : 0;
+
+        if (!response.ok) {
+          alert("AI API error: " + response.status + " " + response.statusText);
+          return { score: 0, feedback: "AI API error." };
+        }
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content || "";
+        let feedbackObj = null;
+        try {
+          feedbackObj = JSON.parse(content);
+        } catch {
+          // fallback: try to extract score and show raw feedback
+          const match = content.match(/\d+/);
+          const score = match ? Math.min(Math.max(parseInt(match[0], 10), 0), maxMarks) : 0;
+          feedbackObj = {
+            score,
+            errors: [],
+            correct: [],
+            improvements: [],
+            conclusion: content
+          };
+        }
+        return feedbackObj;
       } catch (e) {
-        alert(
-          "Backend AI grading error: " + e.message +
-          "\n\nThis usually means the backend server is down or unreachable. " +
-          "Do NOT use localhost for GitHub Pages or public sites. " +
-          "Always use a public backend URL (like Render, Heroku, Vercel, etc)."
-        );
-        return 0;
+        alert("AI API error: " + e.message + "\n\nThis may be due to CORS restrictions, network issues, or the API being unavailable.");
+        return { score: 0, feedback: "AI API error." };
       }
     }
 
@@ -241,36 +289,73 @@ Strictly follow the above marking scheme and the marking guide for each question
       const resultDiv = document.getElementById('result');
       let totalScore = 0;
       let maxScore = 0;
+      let allFeedback = [];
       resultDiv.innerHTML = "<h2>Grading...</h2>";
       for (let idx = 0; idx < loadedQuestions.length; idx++) {
         const q = loadedQuestions[idx];
         const answer = answers[idx] || "";
-        const score = await checkAnswerWithAI(q.question, answer, q.markingGuide, q.maxMarks);
-        scores[idx] = score;
-        totalScore += score;
+        const feedbackObj = await checkAnswerWithAI(q.question, answer, q.markingGuide, q.maxMarks);
+        scores[idx] = feedbackObj.score || 0;
+        totalScore += scores[idx];
         maxScore += q.maxMarks;
+        allFeedback[idx] = feedbackObj;
       }
-      // Show total and feedback
+      // Attractive result page
       resultDiv.innerHTML = `
-        <h2>Total Score: ${totalScore} / ${maxScore}</h2>
-        <div style="margin-top:24px;">
-          <h3>Feedback</h3>
-          <ul>
-            ${loadedQuestions.map((q, idx) =>
-              `<li>Question ${idx + 1}: ${scores[idx] === q.maxMarks ? "Correct" : "Check your code/output."}</li>`
-            ).join("")}
-          </ul>
+        <div style="max-width:1000px;margin:40px auto 0 auto;padding:40px 32px 32px 32px;background:linear-gradient(135deg,#e3f2fd 0%,#fff 100%);border-radius:24px;box-shadow:0 8px 40px #1976d233;">
+          <div style="text-align:center;">
+            <h1 style="color:#1976d2;font-size:3em;margin-bottom:0.2em;letter-spacing:1px;">🎓 Exam Results</h1>
+            <div style="font-size:1.5em;margin-bottom:0.8em;color:#222;font-weight:600;">Sri Lanka Institute of Information Technology</div>
+            <div style="font-size:1.15em;color:#444;">IT1020 – Object Oriented Programming</div>
+            <div style="font-size:1.1em;color:#444;margin-bottom:1.5em;">Year 1, Semester 2 (2025)</div>
+            <div style="font-size:2.5em;font-weight:bold;color:#388e3c;margin-bottom:0.5em;text-shadow:0 2px 8px #388e3c22;">Total Score: ${totalScore} / ${maxScore}</div>
+          </div>
+          <hr style="margin:32px 0 28px 0;border:0;border-top:2px solid #1976d2;">
+          ${loadedQuestions.map((q, idx) => {
+            const fb = allFeedback[idx] || {};
+            return `
+            <div style="margin-bottom:40px;padding:32px 28px;background:linear-gradient(120deg,#f6f8fc 60%,#e3f2fd 100%);border-radius:18px;box-shadow:0 4px 24px #1976d211;">
+              <div style="font-size:1.3em;font-weight:bold;color:#1976d2;margin-bottom:8px;">Question ${idx + 1} <span style="color:#388e3c;">(${scores[idx]} / ${q.maxMarks})</span></div>
+              <div style="margin:10px 0 8px 0;"><b>Question:</b> <span style="color:#222;">${q.question.replace(/\n/g, "<br>")}</span></div>
+              <div style="margin-bottom:8px;"><b>Your Answer:</b><br>
+                <textarea rows="6" style="width:100%;font-family:monospace;background:#f9f9fb;border-radius:8px;border:1.5px solid #90caf9;padding:10px;resize:vertical;min-height:60px;box-shadow:0 1px 6px #1976d211;" disabled>${answers[idx] || ""}</textarea>
+              </div>
+              <div style="margin-bottom:8px;"><b>Expected Output:</b><br>
+                <pre style="background:#f3f3f3;border-radius:8px;padding:10px;font-size:1em;box-shadow:0 1px 6px #1976d211;">${q.expectedOutput}</pre>
+              </div>
+              <div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:32px;">
+                <div style="flex:1;min-width:220px;">
+                  <b style="color:#388e3c;">✔️ Correct Points:</b>
+                  <ul style="margin:6px 0 0 18px;color:#388e3c;font-size:1.05em;">
+                    ${(fb.correct && fb.correct.length) ? fb.correct.map(pt => `<li>${pt}</li>`).join("") : "<li>None</li>"}
+                  </ul>
+                </div>
+                <div style="flex:1;min-width:220px;">
+                  <b style="color:#d32f2f;">❌ Errors:</b>
+                  <ul style="margin:6px 0 0 18px;color:#d32f2f;font-size:1.05em;">
+                    ${(fb.errors && fb.errors.length) ? fb.errors.map(pt => `<li>${pt}</li>`).join("") : "<li>None</li>"}
+                  </ul>
+                </div>
+                <div style="flex:1;min-width:220px;">
+                  <b style="color:#f9a825;">🛠️ Areas to Improve:</b>
+                  <ul style="margin:6px 0 0 18px;color:#f9a825;font-size:1.05em;">
+                    ${(fb.improvements && fb.improvements.length) ? fb.improvements.map(pt => `<li>${pt}</li>`).join("") : "<li>None</li>"}
+                  </ul>
+                </div>
+              </div>
+              <div style="margin-top:14px;font-size:1.08em;">
+                <b>Conclusion:</b> <span style="color:#1976d2;">${fb.conclusion || ""}</span>
+              </div>
+            </div>
+            `;
+          }).join("")}
+          <div style="text-align:center;margin-top:40px;">
+            <span style="font-size:1.2em;color:#1976d2;font-weight:500;">Thank you for completing the exam!<br>Best wishes for your academic journey.</span>
+          </div>
         </div>
       `;
-      // Show all questions and answers with scores
-      document.getElementById('examForm').innerHTML = loadedQuestions.map((q, idx) => `
-        <div class="question">
-          <div><strong>Question ${idx + 1}:</strong><br>${q.question.replace(/\n/g, "<br>")}</div>
-          <textarea rows="10" disabled>${answers[idx] || ""}</textarea>
-          <div><em>Expected Output:</em><pre>${q.expectedOutput}</pre></div>
-          <div class="score">Score: ${scores[idx]} / ${q.maxMarks}</div>
-        </div>
-      `).join('');
+      // Show all questions and answers with scores (hidden, since result page is now attractive)
+      document.getElementById('examForm').innerHTML = "";
       document.querySelector('.nav-btns').style.display = 'none';
       document.getElementById('question-nav').textContent = '';
     }
@@ -364,6 +449,24 @@ Strictly follow the above marking scheme and the marking guide for each question
 
       document.getElementById('submit-btn').onclick = handleSubmit;
     });
+    // Explanation for "localhost refused to connect" error:
+    //
+    // This error happens when your frontend JavaScript tries to call an API endpoint on "localhost"
+    // (e.g., http://localhost:5000 or http://127.0.0.1:5000) but there is no backend server running
+    // and listening on that port on your computer.
+    //
+    // If you run your HTML file directly from VS Code (using "Open with Live Server" or just opening the file),
+    // and your code tries to fetch from "localhost", it will fail unless you have started a backend server.
+    //
+    // Common reasons for this error:
+    // - Your code is trying to call "localhost" but you have not started your backend server.
+    // - You are running your site from a different device than where the backend is running.
+    // - You are using a public/static host (like GitHub Pages) which cannot access your local machine.
+    //
+    // Solution:
+    // - Make sure your backend server is running on your computer at the correct port.
+    // - If you are deploying to a public/static site, always use a public backend URL (not localhost).
+    // - For local development, start your backend (e.g., `node server.js`, `npm start`, `python app.py`, etc.).
   </script>
 </body>
 </html>
