@@ -1,0 +1,200 @@
+### Question 04
+
+Develop a **Company-Employee Management System** implementing a **bidirectional association** where:
+- The `Company` class maintains references to employees working in the company
+- The `Employee` class maintains a reference to the company they work for
+
+---
+
+#### Employee Class Specifications
+The `Employee` class represents an employee with the following details:
+
+**Attributes:**
+- `employeeID` (String) - Employee identifier
+- `employeeName` (String) - Employee's full name
+- `company` (Company) - Reference to the company the employee works for
+
+**Methods:**
+- **Parameterized Constructor** - Initialize employee details (without company initially)
+- `setCompany(Company company)` - Assign the employee to a company and update the company's employee list accordingly
+- `displayEmployeeDetails()` - Print employee ID, name, and company name (if assigned)
+
+---
+
+#### Company Class Specifications
+The `Company` class models a company that can have up to **five employees**.
+
+**Attributes:**
+- `companyID` (String) - Company identifier
+- `companyName` (String) - Name of the company
+- `employees[]` (Employee array) - Fixed-size array to store employees (size = 5)
+- `employeeCount` (int) - Track number of currently employed employees
+
+**Methods:**
+- **Parameterized Constructor** - Initialize company details
+- `addEmployee(Employee employee)` - Add employee to the array (only if `employeeCount < 5`) and set this company as the employee's company; if full, show an error message
+- `displayCompanyDetails()` - Print company information and all employee details
+
+---
+
+### Implement the Main Class
+
+- Create at least 4 Employee objects with different details
+- Create 1 Company object using parameterized constructor
+- Use `addEmployee()` to add all 4 employees to the company
+- Call `displayCompanyDetails()` to show final output
+- Also, demonstrate navigation from an employee to its company by calling `displayEmployeeDetails()` for at least one employee
+
+---
+
+## Main Method Requirements
+
+1. **Create Employee Objects**
+   - Instantiate four `Employee` objects with unique IDs and names
+
+2. **Create Company Object**
+   - Use parameterized constructor to initialize company details
+
+3. **Add Employees to Company**
+   - Use `addEmployee()` method to add all four employees to the company
+
+4. **Display Results**
+   - Call `displayCompanyDetails()` to print complete company information and employee details
+   - Call `displayEmployeeDetails()` on at least one employee to show their company
+
+---
+
+## Expected Output Format
+
+The system should display:
+- Company ID and Name
+- Number of employees
+- Details of each employee (using `displayEmployeeDetails()` method)
+- For the employee example, display employee ID, name, and company name
+
+
+<details>
+  <summary style="font-size:22px; font-weight:bold">🌟 Expected Output</summary>
+  
+```yaml
+=== Company Information ===
+Company ID: C001
+Company Name: TechNova Solutions
+Number of Employees: 4
+Employee Details:
+Employee ID: E101
+Employee Name: Alice Johnson
+Company: TechNova Solutions
+----------------------------
+Employee ID: E102
+Employee Name: Bob Smith
+Company: TechNova Solutions
+----------------------------
+Employee ID: E103
+Employee Name: Carol White
+Company: TechNova Solutions
+----------------------------
+Employee ID: E104
+Employee Name: David Brown
+Company: TechNova Solutions
+----------------------------
+
+=== Individual Employee Details ===
+Employee ID: E102
+Employee Name: Bob Smith
+Company: TechNova Solutions
+----------------------------
+```
+
+</details>
+
+<div align="center">
+
+
+
+
+package Final4.Q4;
+
+public class Employee {
+    private String employeeID;
+    private String employeeName;
+    private Company company;
+
+    public Employee(String employeeID, String employeeName) {
+        this.employeeID = employeeID;
+        this.employeeName = employeeName;
+    }
+
+    public void setCompany(Company company){
+        this.company = company;
+    }
+
+    public void displayEmployeeDetails(){
+        System.out.println("Employee ID: " + employeeID);
+        System.out.println("Employee Name: " + employeeName);
+        System.out.println("Company: " + company.getCompanyName());
+        System.out.println("----------------------------");
+
+    }
+}
+
+class Company{
+    private String companyID;
+    private String companyName;
+    private Employee[] employees = new Employee[5];
+    private int employeeCount = 0;
+
+    public Company(String companyID, String companyName) {
+        this.companyID = companyID;
+        this.companyName = companyName;
+    }
+
+    public String getCompanyName() {
+        return companyName;
+    }
+
+    void addEmployee(Employee employee){
+        if(employeeCount < 5){
+            employees[employeeCount++] = employee;
+            employee.setCompany(this);
+        }
+        else{
+            System.out.println("Error");
+        }
+    }
+
+    void displayCompanyDetails(){
+        System.out.println("Company ID: " + companyID);
+        System.out.println("Company Name: " + companyName);
+        System.out.println("Number of Employees: " + employeeCount);
+        System.out.println("Employee Details: ");
+
+        for(Employee emp : employees){
+            if(emp != null){
+                emp.displayEmployeeDetails();
+            }
+
+        }
+    }
+}
+
+class Main{
+    public static void main(String[] args) {
+        Employee emp1 = new Employee("E101", "Alice Johnson");
+        Employee emp2 = new Employee("E102", "Bob Smith");
+        Employee emp3 = new Employee("E103", "Carol");
+        Employee emp4 = new Employee("E104", "David Brown");
+
+        Company c = new Company("C001", "TechNova Solutions");
+        c.addEmployee(emp1);
+        c.addEmployee(emp2);
+        c.addEmployee(emp3);
+        c.addEmployee(emp4);
+
+
+        c.displayCompanyDetails();
+        System.out.println("\n==Individual Employee Details===");
+        emp2.displayEmployeeDetails();
+
+    }
+}

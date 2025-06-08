@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>OOP Exam</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 24px; }
+    .question { margin-bottom: 32px; border: 1px solid #ccc; padding: 16px; }
+    textarea { width: 100%; margin-top: 8px; }
+    .score { font-weight: bold; }
+    #timer { font-weight: bold; }
+    button { font-size: 18px; padding: 8px 24px; }
+    pre { background: #f8f8f8; padding: 8px; }
+  </style>
+</head>
+<body>
+  <h1>OOP Exam</h1>
+  <div>
+    <strong>Time Left:</strong> <span id="timer">03:00:00</span>
+  </div>
+  <form id="examForm">
+    <!-- Questions will be injected here -->
+  </form>
+  <div id="result"></div>
+  <script>
+    // List of raw GitHub URLs for your question text files
+    const questionFiles = [
+      "https://raw.githubusercontent.com/TharushaAkash/OOP-Test/main/Final/2/Q1.txt",
+      "https://raw.githubusercontent.com/TharushaAkash/OOP-Test/main/Final/2/Q2.txt",
+      "https://raw.githubusercontent.com/TharushaAkash/OOP-Test/main/Final/2/Q3.txt",
+      "https://raw.githubusercontent.com/TharushaAkash/OOP-Test/main/Final/2/Q4.txt",
+      "https://raw.githubusercontent.com/TharushaAkash/OOP-Test/main/Final/2/Q5.txt",
+      "https://raw.githubusercontent.com/TharushaAkash/OOP-Test/main/Final/2/Q6.txt"
+    ];
+
+    // Helper to extract question, marking guide, expected output from text
+    function parseQuestionFile(text) {
+      // Simple extraction: everything before <details> is the question
+      // Inside <details> ... Expected Output is between ``` and ```
+      const questionPart = text.split('<details>')[0].trim();
+      let markingGuide = '';
+      let expectedOutput = '';
+      // Try to extract marking guide and expected output
+      const detailsMatch = text.match(/<details>[\s\S]*?```yaml([\s\S]*?)```/);
+      if (detailsMatch) {
+        expectedOutput = detailsMatch[1].trim();
+      }
+      // Try to extract marking guide if present
+      const markingMatch = text.match(/Marking Guide:([\s\S]*?)\n\n/);
+      if (markingMatch) {
+        markingGuide = markingMatch[1].trim();
+      }
+      return {
+        question: questionPart,
+        markingGuide,
+        expectedOutput,
+        maxMarks: 20 // or extract from file if you want
+      };
+    }
+
+    async function loadQuestions() {
+      const questions = [];
+      for (let url of questionFiles) {
+        try {
+          const resp = await fetch(url);
+          const text = await resp.text();
+          questions.push(parseQuestionFile(text));
+        } catch (e) {
+          questions.push({
+            question: "Failed to load question.",
+            markingGuide: "",
+            expectedOutput: "",
+            maxMarks: 20
+          });
+        }
+      }
+      return questions;
+    }
+
+    // The rest of your logic is unchanged, but renderQuestions() now takes questions as argument
+    const TOTAL_TIME = 3 * 60 * 60; // 3 hours in seconds
+    let timer = TOTAL_TIME;
+    let interval = null;
+    let submitted = false;
+    let scores = {};
+    let loadedQuestions = [];
+
+    function formatTime(sec) {
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      return `${h.toString().padStart(2,"0")}:${m.toString().padStart(2,"0")}:${s.toString().padStart(2,"0")}`;
+    }
+
+    function renderQuestions(questions) {
+      const form = document.getElementById('examForm');
+      form.innerHTML = '';
+      questions.forEach((q, idx) => {
+        const div = document.createElement('div');
+        div.className = 'question';
+        div.innerHTML = `
+          <div><strong>Question ${idx + 1}:</strong><br>${q.question.replace(/\n/g, "<br>")}</div>
+          <textarea rows="10" name="answer${idx}" placeholder="Paste your code here..." ${submitted ? "disabled" : ""}></textarea>
+          <div><em>Expected Output:</em><pre>${q.expectedOutput}</pre></div>
+          <div class="score" id="score${idx}"></div>
+        `;
+        form.appendChild(div);
+      });
+      if (!submitted) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = 'Submit';
+        btn.onclick = handleSubmit;
+        form.appendChild(btn);
+      }
+    }
+
+    function updateTimer() {
+      document.getElementById('timer').textContent = formatTime(timer);
+      if (timer <= 0 && !submitted) {
+        handleSubmit();
+      }
+    }
+
+    function startTimer() {
+      interval = setInterval(() => {
+        timer--;
+        updateTimer();
+        if (timer <= 0) clearInterval(interval);
+      }, 1000);
+    }
+
+    async function checkAnswerWithAI(question, answer, markingGuide, maxMarks) {
+      // Replace this with your actual API call if needed
+      // For demo, return random score
+      return Math.floor(Math.random() * (maxMarks + 1));
+    }
+
+    async function handleSubmit() {
+      if (submitted) return;
+      submitted = true;
+      clearInterval(interval);
+      const form = document.getElementById('examForm');
+      const resultDiv = document.getElementById('result');
+      let totalScore = 0;
+      let maxScore = 0;
+      resultDiv.innerHTML = "<h2>Grading...</h2>";
+      // Grade each answer
+      for (let idx = 0; idx < loadedQuestions.length; idx++) {
+        const q = loadedQuestions[idx];
+        const answer = form.querySelector(`[name=answer${idx}]`).value;
+        const score = await checkAnswerWithAI(q.question, answer, q.markingGuide, q.maxMarks);
+        scores[idx] = score;
+        totalScore += score;
+        maxScore += q.maxMarks;
+        document.getElementById(`score${idx}`).textContent = `Score: ${score} / ${q.maxMarks}`;
+      }
+      // Show total and feedback
+      resultDiv.innerHTML = `
+        <h2>Total Score: ${totalScore} / ${maxScore}</h2>
+        <div style="margin-top:24px;">
+          <h3>Feedback</h3>
+          <ul>
+            ${loadedQuestions.map((q, idx) =>
+              `<li>Question ${idx + 1}: ${scores[idx] === q.maxMarks ? "Correct" : "Check your code/output."}</li>`
+            ).join("")}
+          </ul>
+        </div>
+      `;
+    }
+
+    // Initialize: load questions, then render and start timer
+    loadQuestions().then(qs => {
+      loadedQuestions = qs;
+      renderQuestions(loadedQuestions);
+      updateTimer();
+      startTimer();
+    });
+  </script>
+</body>
+</html>
