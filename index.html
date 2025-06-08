@@ -4,74 +4,132 @@
   <meta charset="UTF-8" />
   <title>OOP Exam</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 24px; }
-    .question { margin-bottom: 32px; border: 1px solid #ccc; padding: 16px; }
-    textarea { width: 100%; margin-top: 8px; }
-    .score { font-weight: bold; }
-    #timer { font-weight: bold; }
-    button { font-size: 18px; padding: 8px 24px; }
-    pre { background: #f8f8f8; padding: 8px; }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>OOP Exam</h1>
-  <div>
-    <strong>Time Left:</strong> <span id="timer">03:00:00</span>
+  <div id="main-container">
+    <div id="front-page" class="centered">
+      <img src="https://www.sliit.lk/wp-content/themes/sliit/images/logo.png" alt="SLIIT Logo" class="logo" />
+      <h2>Sri Lanka Institute of Information Technology</h2>
+      <h3>BSc (Hons) in Information Technology</h3>
+      <h3>Final Examination – Question Paper</h3>
+      <div class="exam-info">
+        <div>Year 1, Semester 2 (2025)</div>
+        <div><strong>IT1020 – Object Oriented Programming</strong></div>
+        <div>Duration: 3 Hours | Total Marks: 100</div>
+      </div>
+      <button id="start-btn" class="main-btn">Start Exam</button>
+    </div>
+    <div id="readme-section" style="display:none;">
+      <div class="readme-content" id="readme-content" style="max-width: 800px; margin: 0 auto; background: #f9f9fb; border-radius: 10px; box-shadow: 0 2px 12px #0001; padding: 32px 24px 24px 24px;">
+        <h2 style="text-align:center; color:#1976d2;">Instructions</h2>
+        <div id="readme-markdown"></div>
+        <div style="text-align:center; margin-top:32px;">
+          <button id="continue-btn" class="main-btn">Continue to Questions</button>
+        </div>
+      </div>
+    </div>
+    <div id="exam-section" style="display:none;">
+      <div class="exam-header">
+        <span id="timer"></span>
+        <span id="question-nav"></span>
+      </div>
+      <form id="examForm">
+        <!-- Question will be injected here -->
+      </form>
+      <div id="result"></div>
+      <div class="nav-btns">
+        <button type="button" id="prev-btn" class="main-btn" style="display:none;">Previous</button>
+        <button type="button" id="next-btn" class="main-btn" style="display:none;">Next</button>
+        <button type="button" id="submit-btn" class="main-btn" style="display:none;">Submit</button>
+      </div>
+    </div>
   </div>
-  <form id="examForm">
-    <!-- Questions will be injected here -->
-  </form>
-  <div id="result"></div>
   <script>
-    // List of raw GitHub URLs for your question text files
+    // List of RAW GitHub URLs for your question text files (must use raw.githubusercontent.com)
     const questionFiles = [
-      "https://raw.githubusercontent.com/TharushaAkash/OOP-Test/main/Final/2/Q1.txt",
-      "https://raw.githubusercontent.com/TharushaAkash/OOP-Test/main/Final/2/Q2.txt",
-      "https://raw.githubusercontent.com/TharushaAkash/OOP-Test/main/Final/2/Q3.txt",
-      "https://raw.githubusercontent.com/TharushaAkash/OOP-Test/main/Final/2/Q4.txt",
-      "https://raw.githubusercontent.com/TharushaAkash/OOP-Test/main/Final/2/Q5.txt",
-      "https://raw.githubusercontent.com/TharushaAkash/OOP-Test/main/Final/2/Q6.txt"
+      "https://raw.githubusercontent.com/TharushaAkash/OOP-Final/main/Questions/Q1.txt",
+      "https://raw.githubusercontent.com/TharushaAkash/OOP-Final/main/Questions/Q2.txt",
+      "https://raw.githubusercontent.com/TharushaAkash/OOP-Final/main/Questions/Q3.txt",
+      "https://raw.githubusercontent.com/TharushaAkash/OOP-Final/main/Questions/Q4.txt",
+      "https://raw.githubusercontent.com/TharushaAkash/OOP-Final/main/Questions/Q5A.txt",
+      "https://raw.githubusercontent.com/TharushaAkash/OOP-Final/main/Questions/Q5B.txt"
     ];
 
+    // Question-specific marking guides and max marks
+    const markingGuides = [
+      "Focus on: Constructors, Getters, Setters, Constructor Overloading, Method Overloading.",
+      "Focus on: Noun-Verb Analysis and CRC Cards.",
+      "Focus on: Exception Handling.",
+      "Focus on: Relationships (Parts 1, 2, and 3).",
+      "Focus on: SOLID Principles.",
+      "Focus on: Interfaces, Static Keyword, and ArrayList."
+    ];
+    const maxMarksList = [20, 15, 15, 25, 10, 15];
+
+    // Marking instructions for all questions (to be included in every prompt)
+    const markingInstructions = `
+01 Constructors, Getters, Setters, Constructor Overloading, Method Overloading 20
+02 Noun-Verb Analysis and CRC Cards 15
+03 Exception Handling 15
+04 Relationships (Parts 1, 2, and 3) 25
+05 (Part A) SOLID Principles 10
+05 (Part B) Interfaces, Static Keyword, and ArrayList 15
+
+Strictly follow the above marking scheme and the marking guide for each question. Do not give marks for irrelevant or blank answers.
+`;
+
     // Helper to extract question, marking guide, expected output from text
-    function parseQuestionFile(text) {
-      // Simple extraction: everything before <details> is the question
-      // Inside <details> ... Expected Output is between ``` and ```
-      const questionPart = text.split('<details>')[0].trim();
-      let markingGuide = '';
-      let expectedOutput = '';
-      // Try to extract marking guide and expected output
-      const detailsMatch = text.match(/<details>[\s\S]*?```yaml([\s\S]*?)```/);
-      if (detailsMatch) {
-        expectedOutput = detailsMatch[1].trim();
+    function parseQuestionFile(text, idx) {
+      // Remove navigation/footer markdown links like [Previous](...) | ... | [Next](...)
+      text = text.replace(/\[Previous\]\([^)]+\)\s*\|[\s\S]*?\[Next\]\([^)]+\)/g, '');
+      text = text.replace(/^\s*\|.*\|\s*$/gm, '');
+
+      // Remove markdown headings (e.g., ### Question 01)
+      text = text.replace(/^#+\s*Question\s*\d+\s*$/gim, '');
+
+      // Remove leading/trailing empty lines
+      text = text.replace(/^\s+|\s+$/g, '');
+
+      // Remove extra empty lines
+      text = text.replace(/\n{3,}/g, '\n\n');
+
+      // Extract code blocks (
+      const codeBlockRegex = /```([\s\S]*?)```/g;
+      let match;
+      const codeBlocks = [];
+      while ((match = codeBlockRegex.exec(text)) !== null) {
+        codeBlocks.push(match[1].trim());
       }
-      // Try to extract marking guide if present
-      const markingMatch = text.match(/Marking Guide:([\s\S]*?)\n\n/);
-      if (markingMatch) {
-        markingGuide = markingMatch[1].trim();
-      }
+      // Remove all code blocks from text for cleaner question display
+      text = text.replace(codeBlockRegex, '');
+
+      // The actual question is now in `text`, marking guide in `markingGuide`, expected output in `expectedOutput`
       return {
-        question: questionPart,
-        markingGuide,
-        expectedOutput,
-        maxMarks: 20 // or extract from file if you want
+        question: text.trim(),
+        markingGuide: markingGuides[idx] || "",
+        expectedOutput: codeBlocks.join('\n').trim(),
+        maxMarks: maxMarksList[idx] || 20
       };
     }
 
     async function loadQuestions() {
       const questions = [];
-      for (let url of questionFiles) {
+      for (let i = 0; i < questionFiles.length; i++) {
+        const url = questionFiles[i];
         try {
           const resp = await fetch(url);
+          if (!resp.ok) {
+            throw new Error("Network response was not ok");
+          }
           const text = await resp.text();
-          questions.push(parseQuestionFile(text));
+          questions.push(parseQuestionFile(text, i));
         } catch (e) {
           questions.push({
-            question: "Failed to load question.",
-            markingGuide: "",
+            question: "Failed to load question. Please check your internet connection or the file URL.",
+            markingGuide: markingGuides[i] || "",
             expectedOutput: "",
-            maxMarks: 20
+            maxMarks: maxMarksList[i] || 20
           });
         }
       }
@@ -85,6 +143,8 @@
     let submitted = false;
     let scores = {};
     let loadedQuestions = [];
+    let answers = [];
+    let currentQuestion = 0;
 
     function formatTime(sec) {
       const h = Math.floor(sec / 3600);
@@ -93,31 +153,39 @@
       return `${h.toString().padStart(2,"0")}:${m.toString().padStart(2,"0")}:${s.toString().padStart(2,"0")}`;
     }
 
-    function renderQuestions(questions) {
+    function showQuestion(idx) {
+      const q = loadedQuestions[idx];
       const form = document.getElementById('examForm');
       form.innerHTML = '';
-      questions.forEach((q, idx) => {
-        const div = document.createElement('div');
-        div.className = 'question';
-        div.innerHTML = `
-          <div><strong>Question ${idx + 1}:</strong><br>${q.question.replace(/\n/g, "<br>")}</div>
-          <textarea rows="10" name="answer${idx}" placeholder="Paste your code here..." ${submitted ? "disabled" : ""}></textarea>
-          <div><em>Expected Output:</em><pre>${q.expectedOutput}</pre></div>
-          <div class="score" id="score${idx}"></div>
-        `;
-        form.appendChild(div);
-      });
-      if (!submitted) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.textContent = 'Submit';
-        btn.onclick = handleSubmit;
-        form.appendChild(btn);
-      }
+      const div = document.createElement('div');
+      div.className = 'question attractive-question';
+      div.innerHTML = `
+        <div class="q-header">
+          <span class="q-number">Question ${idx + 1} of ${loadedQuestions.length}</span>
+        </div>
+        <div class="q-body">
+          <div class="q-text" style="white-space:pre-line; font-family:inherit; background:none; border:none; color:#1a237e;">${q.question}</div>
+          <textarea rows="10" name="answer" class="q-answer" placeholder="Paste your code here..." spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" ${submitted ? "disabled" : ""}>${answers[idx] || ""}</textarea>
+          <div class="q-output">
+            <div class="output-label">Expected Output:</div>
+            <div class="expected-output-section"><pre>${q.expectedOutput}</pre></div>
+          </div>
+          <div class="score" id="score"></div>
+        </div>
+      `;
+      form.appendChild(div);
+
+      // Navigation buttons
+      document.getElementById('prev-btn').style.display = idx > 0 && !submitted ? '' : 'none';
+      document.getElementById('next-btn').style.display = idx < loadedQuestions.length - 1 && !submitted ? '' : 'none';
+      document.getElementById('submit-btn').style.display = (idx === loadedQuestions.length - 1 && !submitted) ? '' : 'none';
+
+      // Question navigation info
+      document.getElementById('question-nav').textContent = `Question ${idx + 1} of ${loadedQuestions.length}`;
     }
 
     function updateTimer() {
-      document.getElementById('timer').textContent = formatTime(timer);
+      document.getElementById('timer').textContent = "Time Left: " + formatTime(timer);
       if (timer <= 0 && !submitted) {
         handleSubmit();
       }
@@ -131,30 +199,56 @@
       }, 1000);
     }
 
+    // --- Copilot AI API integration ---
+    // Based on the code in this repository, the AI API is called directly from the frontend, not through a backend.
+    // Evidence:
+    // - The code below sends requests directly to https://models.github.ai/inference with the API key in the frontend.
+    // - No backend proxy is used; all grading logic and API calls are in the browser.
+    // Security Note:
+    // - As a best practice, sensitive credentials like API keys should not be exposed in frontend code.
+    // - Consider moving API calls to a backend if you want to keep your keys secure.
+
     async function checkAnswerWithAI(question, answer, markingGuide, maxMarks) {
-      // Replace this with your actual API call if needed
-      // For demo, return random score
-      return Math.floor(Math.random() * (maxMarks + 1));
+      // Use a public/external backend endpoint, NOT localhost
+      try {
+        const resp = await fetch("https://tr-test-backend.onrender.com/api/grade", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question, answer, markingGuide, maxMarks })
+        });
+        if (!resp.ok) throw new Error("Backend error: " + resp.status);
+        const data = await resp.json();
+        return typeof data.score === "number" ? data.score : 0;
+      } catch (e) {
+        alert(
+          "Backend AI grading error: " + e.message +
+          "\n\nThis usually means the backend server is down or unreachable. " +
+          "Do NOT use localhost for GitHub Pages or public sites. " +
+          "Always use a public backend URL (like Render, Heroku, Vercel, etc)."
+        );
+        return 0;
+      }
     }
 
     async function handleSubmit() {
       if (submitted) return;
       submitted = true;
       clearInterval(interval);
+      // Save last answer
+      const textarea = document.querySelector('textarea[name="answer"]');
+      if (textarea) answers[currentQuestion] = textarea.value;
       const form = document.getElementById('examForm');
       const resultDiv = document.getElementById('result');
       let totalScore = 0;
       let maxScore = 0;
       resultDiv.innerHTML = "<h2>Grading...</h2>";
-      // Grade each answer
       for (let idx = 0; idx < loadedQuestions.length; idx++) {
         const q = loadedQuestions[idx];
-        const answer = form.querySelector(`[name=answer${idx}]`).value;
+        const answer = answers[idx] || "";
         const score = await checkAnswerWithAI(q.question, answer, q.markingGuide, q.maxMarks);
         scores[idx] = score;
         totalScore += score;
         maxScore += q.maxMarks;
-        document.getElementById(`score${idx}`).textContent = `Score: ${score} / ${q.maxMarks}`;
       }
       // Show total and feedback
       resultDiv.innerHTML = `
@@ -168,14 +262,107 @@
           </ul>
         </div>
       `;
+      // Show all questions and answers with scores
+      document.getElementById('examForm').innerHTML = loadedQuestions.map((q, idx) => `
+        <div class="question">
+          <div><strong>Question ${idx + 1}:</strong><br>${q.question.replace(/\n/g, "<br>")}</div>
+          <textarea rows="10" disabled>${answers[idx] || ""}</textarea>
+          <div><em>Expected Output:</em><pre>${q.expectedOutput}</pre></div>
+          <div class="score">Score: ${scores[idx]} / ${q.maxMarks}</div>
+        </div>
+      `).join('');
+      document.querySelector('.nav-btns').style.display = 'none';
+      document.getElementById('question-nav').textContent = '';
     }
 
-    // Initialize: load questions, then render and start timer
-    loadQuestions().then(qs => {
-      loadedQuestions = qs;
-      renderQuestions(loadedQuestions);
-      updateTimer();
-      startTimer();
+    // Add the raw README URL
+    const readmeUrl = "https://raw.githubusercontent.com/TharushaAkash/OOP-Test/main/Final/2/README.md";
+
+    // Markdown to HTML (simple, covers headings, bold, italic, code, lists, links)
+    function markdownToHtml(md) {
+      let html = md;
+      html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+      html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+      html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+      html = html.replace(/\*\*(.*?)\*\*/gim, '<b>$1</b>');
+      html = html.replace(/\*(.*?)\*/gim, '<i>$1</i>');
+      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+      html = html.replace(/\[(.*?)\]\((.*?)\)/gim, '<a href="$2" target="_blank">$1</a>');
+      // Ordered lists
+      html = html.replace(/(^|\n)(\d+\..*(\n|$))+/g, function(list) {
+        const items = list.trim().split(/\n/).map(line =>
+          line.replace(/^\d+\.\s+/, '').trim()
+        ).filter(Boolean);
+        if (items.length > 0) {
+          return '<ol>' + items.map(i => `<li>${i}</li>`).join('') + '</ol>';
+        }
+        return list;
+      });
+      // Unordered lists
+      html = html.replace(/(^|\n)([-*].*(\n|$))+/g, function(list) {
+        const items = list.trim().split(/\n/).map(line =>
+          line.replace(/^[-*]\s+/, '').trim()
+        ).filter(Boolean);
+        if (items.length > 0) {
+          return '<ul>' + items.map(i => `<li>${i}</li>`).join('') + '</ul>';
+        }
+        return list;
+      });
+      html = html.replace(/\n{2,}/g, '<br><br>');
+      html = html.replace(/\n/g, '<br>');
+      return html;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('start-btn').onclick = async function() {
+        document.getElementById('front-page').style.display = 'none';
+        document.getElementById('readme-section').style.display = 'block';
+        // Fetch and render README
+        const readmeDiv = document.getElementById('readme-markdown');
+        readmeDiv.innerHTML = "<div style='text-align:center;color:#888;'>Loading instructions...</div>";
+        try {
+          const resp = await fetch(readmeUrl);
+          const md = await resp.text();
+          readmeDiv.innerHTML = markdownToHtml(md);
+        } catch (e) {
+          readmeDiv.innerHTML = "<div style='color:red;'>Failed to load instructions.</div>";
+        }
+      };
+
+      document.getElementById('continue-btn').onclick = async function() {
+        document.getElementById('readme-section').style.display = 'none';
+        document.getElementById('exam-section').style.display = 'block';
+        loadedQuestions = await loadQuestions();
+        answers = new Array(loadedQuestions.length).fill('');
+        currentQuestion = 0;
+        showQuestion(currentQuestion);
+        updateTimer();
+        startTimer();
+        document.getElementById('result').innerHTML = '';
+        document.querySelector('.nav-btns').style.display = '';
+      };
+
+      document.getElementById('next-btn').onclick = function() {
+        // Save current answer
+        const textarea = document.querySelector('textarea[name="answer"]');
+        if (textarea) answers[currentQuestion] = textarea.value;
+        if (currentQuestion < loadedQuestions.length - 1) {
+          currentQuestion++;
+          showQuestion(currentQuestion);
+        }
+      };
+
+      document.getElementById('prev-btn').onclick = function() {
+        // Save current answer
+        const textarea = document.querySelector('textarea[name="answer"]');
+        if (textarea) answers[currentQuestion] = textarea.value;
+        if (currentQuestion > 0) {
+          currentQuestion--;
+          showQuestion(currentQuestion);
+        }
+      };
+
+      document.getElementById('submit-btn').onclick = handleSubmit;
     });
   </script>
 </body>
