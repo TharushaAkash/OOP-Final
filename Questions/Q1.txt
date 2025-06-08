@@ -1,15 +1,42 @@
-mok, ask how many copies a member wants to borrow, and process the borrowing using the `borrowBook()` method.
+Question 01
+A library wants to manage book lending operations. Write a Java program to handle the book borrowing process and track book availability.
 
-**III.** For the first book only, ask how many copies are being returned and process using the `returnBook()` method.
+Part (a)
+Write a class called Book to represent the details of a book with the following private attributes:
 
-**IV.** After all operations, display the details of all three books using the `displayBookDetails()` method.
+bookId
+bookTitle
+author
+copiesAvailable
+Part (b)
+Implement a constructor that accepts bookId, bookTitle, author, and copiesAvailable as parameters.
 
+Part (c)
+Implement a method called borrowBook(), which accepts the number of copies a member wants to borrow and displays appropriate messages. It should:
 
+If copiesAvailable is less than the requested number, display:
+"Insufficient copies available. Please request fewer copies or try another book."
+Otherwise:
+Deduct the requested number of copies from copiesAvailable.
+Display: "Book borrowed successfully!"
+Part (d)
+Implement a method called returnBook() that accepts the number of copies being returned and adds them back to copiesAvailable. Display: "Book returned successfully!"
 
-<details>
-  <summary style="font-size:22px; font-weight:bold">🌟 Expected Output</summary>
+Part (e)
+Implement a method called displayBookDetails() to display the complete details of the book, including how many copies are still available.
 
-```yaml
+Part (f)
+Write another Java class called LibraryApp to perform the following tasks:
+
+I. Input details of three books from the user and create three Book objects.
+
+II. For each book, ask how many copies a member wants to borrow, and process the borrowing using the borrowBook() method.
+
+III. For the first book only, ask how many copies are being returned and process using the returnBook() method.
+
+IV. After all operations, display the details of all three books using the displayBookDetails() method.
+
+🌟 Expected Output
 Enter details for Book 1:
 Book ID: 101
 Title: Java Programming
@@ -50,108 +77,3 @@ Title: Algorithms
 Author: Alan Turing
 Copies Available: 4
 -----------------------------
-
-```
-  
-</details>
-
-<div align="center">
-
-⬅️ [Previous](5-B.md) | [**`1`**](1.md) | [2](2.md) | [3](3.md) | [4](4.md) | [5-A](5-A.md) | [5-B](5-B.md) | ➡️ [Next](2.md)
-
-</div>
-
-
-
-
-import java.util.Scanner;
-
-public class Book {
-    private String bookId;
-    private String bookTitle;
-    private String author;
-    private int copiesAvailable;
-
-    public Book(String bookId, String bookTitle, String author, int copiesAvailable) {
-        this.bookId = bookId;
-        this.bookTitle = bookTitle;
-        this.author = author;
-        this.copiesAvailable = copiesAvailable;
-    }
-
-    void borrowBook(int copies){
-        if(copies > copiesAvailable){
-            System.out.println("Insufficient copies available. Please request fewer copies or try another book.");
-        }
-        else{
-            copiesAvailable -= copies;
-            System.out.println("Book borrowed successfully!");
-        }
-    }
-
-    void returnBook(int returnd){
-        copiesAvailable += returnd;
-        System.out.println("Book returned successfully!");
-    }
-
-    void displayBookDetails(){
-        System.out.println("Book ID: " + bookId);
-        System.out.println("Title: " + bookTitle);
-        System.out.println("Author: " + author);
-        System.out.println("Copies Available: " + copiesAvailable);
-        System.out.println("-------------------------------------");
-    }
-}
-
-class LibraryApp{
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        Book[]books = new Book[3];
-
-        for(int i = 0; i < books.length; i++){
-            System.out.println("Enter details for Book " + (i+1) + ": ");
-            System.out.print("Book ID: ");
-            String id = sc.nextLine();
-
-            System.out.print("Title: ");
-            String title = sc.nextLine();
-
-            System.out.print("Author: ");
-            String author = sc.nextLine();
-
-            System.out.print("Copies Available: ");
-            int copies = sc.nextInt();
-            sc.nextLine();//Remove bufferspace
-            System.out.println(); //Line Space
-
-            Book book = new Book(id, title, author, copies);
-            books[i] = book;
-        }
-
-
-        System.out.print("Enter number of copies to borrow for Book 1: ");
-        int copiesB = sc.nextInt();
-        books[0].borrowBook(copiesB);
-        System.out.println(); //Line Space
-
-        System.out.print("Enter number of copies to borrow for Book 2: ");
-        int copiesB0= sc.nextInt();
-        books[1].borrowBook(copiesB0);
-        System.out.println();
-
-        System.out.print("Enter number of copies to borrow for Book 3: ");
-        int copiesB1 = sc.nextInt();
-        books[2].borrowBook(copiesB1);
-        System.out.println();
-
-        System.out.print("Enter number of copies to return for Book 1: ");
-        int copiesR = sc.nextInt();
-        books[0].returnBook(copiesR);
-        System.out.println();
-        //line space
-        System.out.println("Final Book Details:");
-        for(Book b : books){
-            b.displayBookDetails();
-        }
-    }
-}

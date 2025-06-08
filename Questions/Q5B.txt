@@ -1,58 +1,40 @@
-### Question 5 (Part B)
+Question 5 (Part B)
+Write a program to implement a Vehicle Registration System using an interface, a static method to set a common registration year, and an ArrayList to manage vehicles. Follow the specifications below:
 
-Write a program to implement a **Vehicle Registration System** using an interface, a static method to set a common registration year, and an ArrayList to manage vehicles. Follow the specifications below:
-
-
-#### 1. Interface: `Registrable`
-
+1. Interface: Registrable
 Define the following methods:
 
-* `String getVehicleID()`
-* `String getModel()`
-* `void displayInfo()`
-
-
-#### 2. Class: `Vehicle` (implements `Registrable`)
-
+String getVehicleID()
+String getModel()
+void displayInfo()
+2. Class: Vehicle (implements Registrable)
 Attributes:
 
-* `vehicleID` (String)
-* `model` (String)
-* `owner` (String)
-* `static int registrationYear` (common for all vehicles)
-
+vehicleID (String)
+model (String)
+owner (String)
+static int registrationYear (common for all vehicles)
 Methods:
 
-* Parameterized constructor
-* Implement all methods from `Registrable`
-* `String getOwner()`
-* `static void setRegistrationYear(int year)`
-* `int getRegistrationYear()`
-
-
-#### 3. Class: `VehicleRegistry`
-
+Parameterized constructor
+Implement all methods from Registrable
+String getOwner()
+static void setRegistrationYear(int year)
+int getRegistrationYear()
+3. Class: VehicleRegistry
 Attribute:
 
-* `ArrayList<Vehicle> vehicles`
-
+ArrayList<Vehicle> vehicles
 Methods:
 
-* `void addVehicle(Vehicle v)`
-* `void displayAllVehicles()`
-
-
-#### 4. In the `main` method:
-
-* Set the registration year using `Vehicle.setRegistrationYear()`
-* Create at least 3 vehicle objects
-* Add them to the `VehicleRegistry`
-* Display all vehicle details including registration year
-
-<details>
-  <summary style="font-size:22px; font-weight:bold">🌟 Expected Output</summary>
-
-```yaml
+void addVehicle(Vehicle v)
+void displayAllVehicles()
+4. In the main method:
+Set the registration year using Vehicle.setRegistrationYear()
+Create at least 3 vehicle objects
+Add them to the VehicleRegistry
+Display all vehicle details including registration year
+🌟 Expected Output
 Vehicle ID: V001
 Model: Toyota Corolla
 Owner: Alice
@@ -68,102 +50,3 @@ Model: Ford Focus
 Owner: Charlie
 Registration Year: 2025
 -----------------------------
-```
-  
-</details>
-
-<div align="center">
-
-
-
-
-package Final4.Q5B;
-
-import Final4.Q4.Employee;
-
-import java.util.ArrayList;
-
-public interface Registrable {
-    String getVehicleID();
-    String getModel();
-    void displayInfo();
-}
-
-class Vehicle implements Registrable{
-    private String vehicleID;
-    private String model;
-    private String owner;
-    private static int registrationYear;
-
-    public Vehicle(String vehicleID, String model, String owner) {
-        this.vehicleID = vehicleID;
-        this.model = model;
-        this.owner = owner;
-    }
-
-    @Override
-    public String getVehicleID() {
-        return vehicleID;
-    }
-
-    @Override
-    public String getModel() {
-        return model;
-    }
-
-    @Override
-    public void displayInfo() {
-        System.out.println("Vehicle ID: " + getVehicleID());
-        System.out.println("Model: " + getModel());
-        System.out.println("Owner: " + getOwner());
-        System.out.println("Registration Year: " + getRegistrationYear());
-        System.out.println("--------------------------------");
-
-    }
-    String getOwner(){
-        return owner;
-    }
-
-    static void setRegistrationYear(int year){
-        Vehicle.registrationYear = year;
-    }
-
-    int getRegistrationYear(){
-        return registrationYear;
-    }
-
-}
-
-class VehicleRegistry{
-    ArrayList<Vehicle> vehicles = new ArrayList<>();
-
-    void addVehicle(Vehicle v){
-        vehicles.add(v);
-    }
-
-    void displayAllVehicles(){
-        for(Vehicle v : vehicles){
-            v.displayInfo();
-        }
-    }
-}
-
-class Main{
-    public static void main(String[] args) {
-
-        Vehicle.setRegistrationYear(2025);
-        VehicleRegistry vehicleRegistry = new VehicleRegistry();
-         Vehicle v1 = new Vehicle("V001", "Toyota Corrolla", "Alice");
-         Vehicle v2 = new Vehicle("V002", "Honda Civic", "Bob");
-         Vehicle v3 = new Vehicle("V003", "Ford Focus", "Charlie");
-
-         vehicleRegistry.addVehicle(v1);
-         vehicleRegistry.addVehicle(v2);
-         vehicleRegistry.addVehicle(v3);
-
-         vehicleRegistry.displayAllVehicles();
-
-
-
-    }
-}

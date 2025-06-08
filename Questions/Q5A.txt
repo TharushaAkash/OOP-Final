@@ -1,9 +1,6 @@
-### Question 05 (Part A)
+Question 05 (Part A)
+Question: The following NotificationService class violates the Dependency Inversion Principle by directly depending on concrete classes rather than abstractions. Refactor the code to follow DIP.
 
-**Question:**
-The following `NotificationService` class violates the Dependency Inversion Principle by directly depending on concrete classes rather than abstractions. Refactor the code to follow DIP.
-
-```java
 public class EmailService {
     public void sendEmail(String message) {
         System.out.println("Sending email: " + message);
@@ -42,61 +39,5 @@ public class Main {
         service.sendNotification("Hello World", "sms");
     }
 }
-```
+Task: Refactor the above code to follow the Dependency Inversion Principle. Use abstractions (interfaces) so that high-level modules don't depend directly on low-level modules.
 
-**Task:** Refactor the above code to follow the Dependency Inversion Principle. Use abstractions (interfaces) so that high-level modules don't depend directly on low-level modules.
-
-<div align="center">
-
-
-
-package Final4.Q5A;
-
-public interface Notifier {
-    void sendMsg(String message);
-}
-class EmailService implements Notifier{
-    @Override
-    public void sendMsg(String message) {
-        System.out.println("Sending email: "+ message);
-    }
-}
-
-class SMSService implements Notifier {
-    @Override
-    public void sendMsg(String message) {
-        System.out.println("Sending SMS: " + message);
-    }
-}
-
-class NotificationService{
-    private Notifier emailService;
-    private Notifier smsService;
-
-    public NotificationService(Notifier emailService, Notifier smsService) {
-        this.emailService = emailService;
-        this.smsService = smsService;
-    }
-
-    public void sendNotification(String message, String type) {
-        if (type.equals("email")) {
-            emailService.sendMsg(message);
-        } else if (type.equals("sms")) {
-            smsService.sendMsg(message);
-        }
-    }
-}
-
-class Main{
-        public static void main(String[] args) {
-            Notifier email = new EmailService();
-            Notifier sms = new SMSService();
-
-            NotificationService service = new NotificationService(email, sms);
-
-            service.sendNotification("Hello World", "email");
-            service.sendNotification("Hello World", "sms");
-        }
-
-
-}
