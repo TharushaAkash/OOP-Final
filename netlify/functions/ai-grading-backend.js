@@ -154,3 +154,18 @@ if (require.main === module) {
 // To run this backend locally, you must have Node.js installed.
 // If you see "'node' is not recognized...", install Node.js from https://nodejs.org/
 // After installing, restart your terminal and try: node ai-grading-backend.js
+
+// Ensure all dependencies are listed in package.json and committed to your repository.
+// Example dependencies for this backend:
+  // "express": "^4.18.2",
+  // "cors": "^2.8.5",
+  // "@azure-rest/ai-inference": "^1.0.0",
+  // "@azure/core-auth": "^1.5.0"
+
+// If you use Netlify, make sure your root package.json includes these dependencies.
+// If you see build errors, check the full build logs in Netlify for missing packages or syntax errors.
+
+// To debug locally:
+// 1. Run: npm install
+// 2. Then: node netlify/functions/ai-grading-backend.js
+// 3. Fix any errors shown in your terminal before deploying to Netlify.
