@@ -67,18 +67,6 @@
     ];
     const maxMarksList = [20, 15, 15, 25, 10, 15];
 
-    // Marking instructions for all questions (to be included in every prompt)
-    const markingInstructions = `
-01 Constructors, Getters, Setters, Constructor Overloading, Method Overloading 20
-02 Noun-Verb Analysis and CRC Cards 15
-03 Exception Handling 15
-04 Relationships (Parts 1, 2, and 3) 25
-05 (Part A) SOLID Principles 10
-05 (Part B) Interfaces, Static Keyword, and ArrayList 15
-
-Strictly follow the above marking scheme and the marking guide for each question. Do not give marks for irrelevant or blank answers.
-`;
-
     // Helper to extract question, marking guide, expected output from text
     function parseQuestionFile(text, idx) {
       // Remove navigation/footer markdown links like [Previous](...) | ... | [Next](...)
@@ -211,14 +199,34 @@ Strictly follow the above marking scheme and the marking guide for each question
     async function checkAnswerWithAI(question, answer, markingGuide, maxMarks) {
       if (!answer || !answer.trim()) return { score: 0, feedback: "No answer provided." };
       try {
+        // --- FIX: Use the correct token and show clear error for 401 ---
         const token = "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";
         const endpoint = "https://models.github.ai/inference";
         const model = "openai/gpt-4.1";
+
+        // Try both relative and absolute paths for the txt file
+        let markingInstructions = "";
+        let fileLoaded = false;
+        for (const path of ["ai-marking-instructions.txt", "./ai-marking-instructions.txt", "/ai-marking-instructions.txt"]) {
+          try {
+            const resp = await fetch(path);
+            if (resp.ok) {
+              markingInstructions = await resp.text();
+              fileLoaded = true;
+              break;
+            }
+          } catch (e) {
+            // Try next path
+          }
+        }
+        if (!fileLoaded) {
+          markingInstructions = "Strictly grade according to the question and expected output. Do not give marks for blank or irrelevant answers.";
+        }
+
         const prompt = `
-You are an exam grader. Grade the following answer strictly according to the marking guide and allocate marks out of ${maxMarks}.
+${markingInstructions}
 
 Question: ${question}
-Marking Guide: ${markingGuide || "N/A"}
 Student Answer: ${answer}
 
 Respond in the following JSON format:
@@ -233,34 +241,44 @@ Respond in the following JSON format:
 If the answer is blank, empty, or only whitespace, respond with {"score":0,"errors":["No answer provided."],"correct":[],"improvements":[],"conclusion":"No answer submitted."}
 `;
 
-        const response = await fetch(endpoint + "/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + token
-          },
-          body: JSON.stringify({
-            messages: [
-              { role: "system", content: "You are an exam grading assistant." },
-              { role: "user", content: prompt }
-            ],
-            temperature: 0,
-            top_p: 1,
-            model: model
-          })
-        });
+        let response;
+        try {
+          response = await fetch(endpoint + "/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + token
+            },
+            body: JSON.stringify({
+              messages: [
+                { role: "system", content: "You are an exam grading assistant." },
+                { role: "user", content: prompt }
+              ],
+              temperature: 0,
+              top_p: 1,
+              model: model
+            })
+          });
+        } catch (networkErr) {
+          alert("AI API network error or CORS restriction. The API server may be down or not accepting browser requests.");
+          throw new Error("AI API error: Network error or CORS restriction.");
+        }
 
         if (!response.ok) {
-          alert("AI API error: " + response.status + " " + response.statusText);
-          return { score: 0, feedback: "AI API error." };
+          if (response.status === 401) {
+            alert("AI API error: 401 Unauthorized.\n\nYour API token is invalid, expired, or not authorized for this endpoint.\nPlease check your API key or contact the API provider.");
+          } else {
+            alert(`AI API error: ${response.status} ${response.statusText}\n\nThe API server may be down or your API key may be invalid.`);
+          }
+          throw new Error(`AI API error: ${response.status} ${response.statusText}`);
         }
+
         const data = await response.json();
         const content = data.choices?.[0]?.message?.content || "";
         let feedbackObj = null;
         try {
           feedbackObj = JSON.parse(content);
         } catch {
-          // fallback: try to extract score and show raw feedback
           const match = content.match(/\d+/);
           const score = match ? Math.min(Math.max(parseInt(match[0], 10), 0), maxMarks) : 0;
           feedbackObj = {
@@ -273,8 +291,8 @@ If the answer is blank, empty, or only whitespace, respond with {"score":0,"erro
         }
         return feedbackObj;
       } catch (e) {
-        alert("AI API error: " + e.message + "\n\nThis may be due to CORS restrictions, network issues, or the API being unavailable.");
-        return { score: 0, feedback: "AI API error." };
+        alert("AI API error: " + (e && e.message ? e.message : "Unknown error") + "\n\nGrading stopped. Please try again later.");
+        throw e;
       }
     }
 
@@ -291,14 +309,23 @@ If the answer is blank, empty, or only whitespace, respond with {"score":0,"erro
       let maxScore = 0;
       let allFeedback = [];
       resultDiv.innerHTML = "<h2>Grading...</h2>";
-      for (let idx = 0; idx < loadedQuestions.length; idx++) {
-        const q = loadedQuestions[idx];
-        const answer = answers[idx] || "";
-        const feedbackObj = await checkAnswerWithAI(q.question, answer, q.markingGuide, q.maxMarks);
-        scores[idx] = feedbackObj.score || 0;
-        totalScore += scores[idx];
-        maxScore += q.maxMarks;
-        allFeedback[idx] = feedbackObj;
+      try {
+        for (let idx = 0; idx < loadedQuestions.length; idx++) {
+          const q = loadedQuestions[idx];
+          const answer = answers[idx] || "";
+          const feedbackObj = await checkAnswerWithAI(q.question, answer, q.markingGuide, q.maxMarks);
+          scores[idx] = feedbackObj.score || 0;
+          totalScore += scores[idx];
+          maxScore += q.maxMarks;
+          allFeedback[idx] = feedbackObj;
+        }
+      } catch (e) {
+        // If AI API fails, stop and do not show result page
+        resultDiv.innerHTML = "<div style='color:red;font-size:1.2em;text-align:center;margin-top:40px;'>Grading failed due to AI API error. Please try again later.</div>";
+        document.getElementById('examForm').innerHTML = "";
+        document.querySelector('.nav-btns').style.display = 'none';
+        document.getElementById('question-nav').textContent = '';
+        return;
       }
       // Attractive result page
       resultDiv.innerHTML = `

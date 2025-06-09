@@ -4,7 +4,8 @@
 import ModelClient, { isUnexpected } from "@azure-rest/ai-inference";
 import { AzureKeyCredential } from "@azure/core-auth";
 
-const token = "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";
+// Use the token directly (not from process.env) to avoid undefined token issues
+const token = "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";
 const endpoint = "https://models.github.ai/inference";
 const model = "openai/gpt-4.1";
 
@@ -79,6 +80,29 @@ async function main() {
   const maxMarks = 5;
   const score = await checkAnswerWithAI(question, answer, markingGuide, maxMarks);
   console.log("Score:", score);
+
+  const client = ModelClient(
+    endpoint,
+    new AzureKeyCredential(token),
+  );
+
+  const response = await client.path("/chat/completions").post({
+    body: {
+      messages: [
+        { role:"system", content: "" },
+        { role:"user", content: "What is the capital of France?" }
+      ],
+      temperature: 1,
+      top_p: 1,
+      model: model
+    }
+  });
+
+  if (isUnexpected(response)) {
+    throw response.body.error;
+  }
+
+  console.log(response.body.choices[0].message.content);
 }
 
 main().catch((err) => {
