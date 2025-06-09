@@ -2,9 +2,29 @@
 
 const fetch = require("node-fetch");
 
-const token = process.env.AI_API_TOKEN || "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";
+const token = process.env.AI_API_TOKEN;
 const endpoint = "https://models.github.ai/inference";
 const model = "openai/gpt-4.1";
+
+/*
+  To use this file as a Netlify Function:
+
+  1. Rename this file to `ai-grading-backend.js` (if you want the endpoint to be /ai-grading-backend).
+  2. Move or copy this file into a folder named `functions` inside your Netlify project root.
+     Example: c:\Users\Tharusha\Documents\OOP\netlify\functions\ai-grading-backend.js
+
+  3. In your Netlify project, make sure your `netlify.toml` contains:
+     [functions]
+     directory = "netlify/functions"
+
+  4. Deploy your site to Netlify. Netlify will automatically deploy this function.
+  5. Your function will be available at:
+     https://<your-site>.netlify.app/.netlify/functions/ai-grading-backend
+
+  6. Set your AI_API_TOKEN environment variable in the Netlify site settings (not in code).
+
+  See: https://docs.netlify.com/functions/overview/
+*/
 
 exports.handler = async (event, context) => {
   if (event.httpMethod !== "POST") {
@@ -29,6 +49,14 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 400,
       body: JSON.stringify({ error: "Missing required fields." })
+    };
+  }
+
+  if (!token || typeof token !== "string" || token.length < 20) {
+    console.error("AI_API_TOKEN is missing or invalid.");
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: "AI_API_TOKEN is missing or invalid. Set it in your Netlify environment variables." })
     };
   }
 
