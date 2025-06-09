@@ -188,23 +188,16 @@
     }
 
     // --- Copilot AI API integration ---
-    // Based on the code in this repository, the AI API is called directly from the frontend, not through a backend.
-    // Evidence:
-    // - The code below sends requests directly to https://models.github.ai/inference with the API key in the frontend.
-    // - No backend proxy is used; all grading logic and API calls are in the browser.
-    // Security Note:
-    // - As a best practice, sensitive credentials like API keys should not be exposed in frontend code.
-    // - Consider moving API calls to a backend if you want to keep your keys secure.
-
+    // CHANGE: Use your backend endpoint instead of calling the AI API directly from the frontend.
     async function checkAnswerWithAI(question, answer, markingGuide, maxMarks) {
       if (!answer || !answer.trim()) return { score: 0, feedback: "No answer provided." };
       try {
-        // --- FIX: Use the correct token and show clear error for 401 ---
-        const token = "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";
-        const endpoint = "https://models.github.ai/inference";
-        const model = "openai/gpt-4.1";
+        // CHANGE: Call your backend (e.g., Netlify function or Express server)
+        // Example: const backendUrl = "https://your-netlify-site.netlify.app/.netlify/functions/ai-grading-backend";
+        // For local dev: const backendUrl = "http://localhost:8888/api/grade";
+        const backendUrl = "/.netlify/functions/ai-grading-backend"; // Update this if needed
 
-        // Try both relative and absolute paths for the txt file
+        // Always load marking instructions from the txt file (frontend)
         let markingInstructions = "";
         let fileLoaded = false;
         for (const path of ["ai-marking-instructions.txt", "./ai-marking-instructions.txt", "/ai-marking-instructions.txt"]) {
@@ -215,83 +208,40 @@
               fileLoaded = true;
               break;
             }
-          } catch (e) {
-            // Try next path
-          }
+          } catch (e) {}
         }
         if (!fileLoaded) {
           markingInstructions = "Strictly grade according to the question and expected output. Do not give marks for blank or irrelevant answers.";
         }
 
-        const prompt = `
-${markingInstructions}
-
-Question: ${question}
-Student Answer: ${answer}
-
-Respond in the following JSON format:
-{
-  "score": <integer from 0 to ${maxMarks}>,
-  "errors": [ "list of mistakes or missing points" ],
-  "correct": [ "list of correct points" ],
-  "improvements": [ "list of areas to improve" ],
-  "conclusion": "short summary of the answer quality"
-}
-
-If the answer is blank, empty, or only whitespace, respond with {"score":0,"errors":["No answer provided."],"correct":[],"improvements":[],"conclusion":"No answer submitted."}
-`;
-
-        let response;
-        try {
-          response = await fetch(endpoint + "/chat/completions", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": "Bearer " + token
-            },
-            body: JSON.stringify({
-              messages: [
-                { role: "system", content: "You are an exam grading assistant." },
-                { role: "user", content: prompt }
-              ],
-              temperature: 0,
-              top_p: 1,
-              model: model
-            })
-          });
-        } catch (networkErr) {
-          alert("AI API network error or CORS restriction. The API server may be down or not accepting browser requests.");
-          throw new Error("AI API error: Network error or CORS restriction.");
-        }
+        const response = await fetch(backendUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            question,
+            answer,
+            maxMarks,
+            markingInstructions
+          })
+        });
 
         if (!response.ok) {
-          if (response.status === 401) {
-            alert("AI API error: 401 Unauthorized.\n\nYour API token is invalid, expired, or not authorized for this endpoint.\nPlease check your API key or contact the API provider.");
-          } else {
-            alert(`AI API error: ${response.status} ${response.statusText}\n\nThe API server may be down or your API key may be invalid.`);
-          }
-          throw new Error(`AI API error: ${response.status} ${response.statusText}`);
+          const err = await response.json().catch(() => ({}));
+          alert("AI Grading backend error: " + (err.error || response.statusText));
+          throw new Error("AI Grading backend error: " + (err.error || response.statusText));
         }
 
         const data = await response.json();
-        const content = data.choices?.[0]?.message?.content || "";
-        let feedbackObj = null;
-        try {
-          feedbackObj = JSON.parse(content);
-        } catch {
-          const match = content.match(/\d+/);
-          const score = match ? Math.min(Math.max(parseInt(match[0], 10), 0), maxMarks) : 0;
-          feedbackObj = {
-            score,
-            errors: [],
-            correct: [],
-            improvements: [],
-            conclusion: content
-          };
-        }
-        return feedbackObj;
+        // The backend returns { score, raw }
+        return {
+          score: data.score || 0,
+          errors: [],
+          correct: [],
+          improvements: [],
+          conclusion: data.raw || ""
+        };
       } catch (e) {
-        alert("AI API error: " + (e && e.message ? e.message : "Unknown error") + "\n\nGrading stopped. Please try again later.");
+        alert("AI Grading backend error: " + (e && e.message ? e.message : "Unknown error") + "\n\nGrading stopped. Please try again later.");
         throw e;
       }
     }
